@@ -62,7 +62,7 @@ data:
     cluster_network = {}
     service_subnets = 10.96.0.0/12
     pod_subnets = 10.32.0.0/12
-    api_server = {{ groups.masters | ipaddr | join(',') }}
+    api_server = {{ api_vip | ipaddr }}
   kubernetes-agent-config: |-
     [AGENT]
 ---

@@ -44,6 +44,15 @@
       - { port: '8093', service: 'contrail-control-introspect' }
       - { port: '8086', service: 'contrail-analytics-collector' }
 
+
+  - set_fact:
+      api_vip: "{{ groups.lb.0 | ipaddr }}"
+    when: groups.lb is defined
+
+  - set_fact:
+      api_vip: "{{ groups.masters.0 | ipaddr }}"
+    when: groups.lb is not defined
+
   - name: Create Contrail single YAML file
     template:
       src: contrail-installer.j2

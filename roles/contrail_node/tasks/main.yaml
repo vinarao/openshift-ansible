@@ -57,10 +57,6 @@
       mode: a+x
       remote_src: yes
 
-- when:
-  - inventory_hostname == contrail_master
-
-  block:
   - name: Add Contrail service account to privileged scc
     oc_adm_policy_user:
       user: system:serviceaccount:kube-system:contrail
@@ -77,17 +73,18 @@
       state: present
     delegate_to: "{{ contrail_master }}"
 
-  - name: Patch restricted scc
-    command: >
-      oc patch scc restricted --patch='{ "runAsUser": { "type": "RunAsAny" } }'
-    delegate_to: "{{ contrail_master }}"
-
   - name: Label master nodes with opencontrail.org/controller=true
     command: oc label nodes {{ openshift.common.hostname }} opencontrail.org/controller=true --overwrite=true
+    delegate_to: "{{ contrail_master }}"
 
   - name: Make master schedulable
     command: oadm manage-node {{ openshift.common.hostname }} --schedulable
+    delegate_to: "{{ contrail_master }}"
+#  - name: Launch the Contrail installer
+#    command: oc create -f /tmp/contrail-installer.yaml
+#    delegate_to: "{{ contrail_master }}"
 
-  - name: Launch the Contrail installer
-    command: oc create -f /tmp/contrail-installer.yaml
+  - name: Patch restricted scc
+    command: >
+      oc patch scc restricted --patch='{ "runAsUser": { "type": "RunAsAny" } }'
     delegate_to: "{{ contrail_master }}"
