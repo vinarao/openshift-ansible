@@ -57,34 +57,41 @@
       mode: a+x
       remote_src: yes
 
-  - name: Add Contrail service account to privileged scc
-    oc_adm_policy_user:
-      user: system:serviceaccount:kube-system:contrail
-      resource_kind: scc
-      resource_name: privileged
-      state: present
-    delegate_to: "{{ contrail_master }}"
+- name: Add Contrail service account to privileged scc
+  oc_adm_policy_user:
+    user: system:serviceaccount:kube-system:contrail
+    resource_kind: scc
+    resource_name: privileged
+    state: present
+  delegate_to: "{{ contrail_master }}"
 
-  - name: Add the daemonset-controller service account to privileged scc
-    oc_adm_policy_user:
-      user: system:serviceaccount:kube-system:daemon-set-controller
-      resource_kind: scc
-      resource_name: privileged
-      state: present
-    delegate_to: "{{ contrail_master }}"
+- name: Add the daemonset-controller service account to privileged scc
+  oc_adm_policy_user:
+    user: system:serviceaccount:kube-system:daemon-set-controller
+    resource_kind: scc
+    resource_name: privileged
+    state: present
+  delegate_to: "{{ contrail_master }}"
 
-  - name: Label master nodes with opencontrail.org/controller=true
-    command: oc label nodes {{ openshift.common.hostname }} opencontrail.org/controller=true --overwrite=true
-    delegate_to: "{{ contrail_master }}"
+- name: Label master nodes with opencontrail.org/controller=true
+  command: oc label nodes {{ hostvars[item]['openshift_hostname'] }} opencontrail.org/controller=true --overwrite=true
+  run_once: True
+  with_items: "{{ groups.masters }}"
+  delegate_to: "{{ contrail_master }}"
 
-  - name: Make master schedulable
-    command: oadm manage-node {{ openshift.common.hostname }} --schedulable
-    delegate_to: "{{ contrail_master }}"
-#  - name: Launch the Contrail installer
-#    command: oc create -f /tmp/contrail-installer.yaml
-#    delegate_to: "{{ contrail_master }}"
+- name: Make master schedulable
+  command: oadm manage-node {{ hostvars[item]['openshift_hostname'] }} --schedulable
+  run_once: True
+  with_items: "{{ groups.masters }}"
+  delegate_to: "{{ contrail_master }}"
 
-  - name: Patch restricted scc
-    command: >
-      oc patch scc restricted --patch='{ "runAsUser": { "type": "RunAsAny" } }'
-    delegate_to: "{{ contrail_master }}"
+- name: Launch the Contrail installer
+  command: oc create -f /tmp/contrail-installer.yaml
+  run_once: True
+  delegate_to: "{{ contrail_master }}"
+
+- name: Patch restricted scc
+  command: >
+    oc patch scc restricted --patch='{ "runAsUser": { "type": "RunAsAny" } }'
+  run_once: True
+  delegate_to: "{{ contrail_master }}"

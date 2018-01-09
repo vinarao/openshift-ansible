@@ -44,7 +44,6 @@
       - { port: '8093', service: 'contrail-control-introspect' }
       - { port: '8086', service: 'contrail-analytics-collector' }
 
-
   - set_fact:
       api_vip: "{{ groups.lb.0 | ipaddr }}"
     when: groups.lb is defined

@@ -31,14 +31,14 @@ contrail_os_release=redhat7
 contrail_version=4.1.0.0-8
 analyticsdb_min_diskgb=30
 configdb_min_diskgb=25
-vrouter_physical_interface=eno1
+vrouter_physical_interface=enp2s0
 contrail_docker_images_path=/root/docker_images
 cni_version=v0.5.2
 
 [masters]
 10.87.64.149 openshift_hostname=5b4s40
 10.87.64.150 openshift_hostname=5b4s41
-10.84.29.38 openshift_hostname=b7s38
+10.84.29.39 openshift_hostname=b7s39
 
 [lb]
 10.84.18.2 openshift_hostname=a4s2
@@ -49,7 +49,7 @@ cni_version=v0.5.2
 [nodes]
 10.87.64.149 openshift_hostname=5b4s40
 10.87.64.150 openshift_hostname=5b4s41
-10.84.29.38 openshift_hostname=b7s38
+10.84.29.39 openshift_hostname=b7s39
 10.84.18.3 openshift_hostname=a4s3
 10.84.18.4 openshift_hostname=a4s4
 10.84.18.5 openshift_hostname=a4s5
