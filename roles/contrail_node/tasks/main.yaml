@@ -63,6 +63,7 @@
     resource_kind: scc
     resource_name: privileged
     state: present
+  run_once: True
   delegate_to: "{{ contrail_master }}"
 
 - name: Add the daemonset-controller service account to privileged scc
@@ -71,18 +72,19 @@
     resource_kind: scc
     resource_name: privileged
     state: present
+  run_once: True
   delegate_to: "{{ contrail_master }}"
 
 - name: Label master nodes with opencontrail.org/controller=true
   command: oc label nodes {{ hostvars[item]['openshift_hostname'] }} opencontrail.org/controller=true --overwrite=true
-  run_once: True
   with_items: "{{ groups.masters }}"
+  run_once: True
   delegate_to: "{{ contrail_master }}"
 
 - name: Make master schedulable
   command: oadm manage-node {{ hostvars[item]['openshift_hostname'] }} --schedulable
-  run_once: True
   with_items: "{{ groups.masters }}"
+  run_once: True
   delegate_to: "{{ contrail_master }}"
 
 - name: Launch the Contrail installer

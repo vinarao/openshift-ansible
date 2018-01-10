@@ -43,6 +43,11 @@
       - { port: '8093', service: 'contrail-control-dns-xmpp' }
       - { port: '8093', service: 'contrail-control-introspect' }
       - { port: '8086', service: 'contrail-analytics-collector' }
+      - { port: '2181', service: 'zookeeper' }
+      - { port: '5672', service: 'rabbitmq' }
+      - { port: '8081', service: 'contrail-analytics-api' }
+      - { port: '6381', service: 'redis' }
+      - { port: '9092', service: 'kafka' }
 
   - set_fact:
       api_vip: "{{ groups.lb.0 | ipaddr }}"

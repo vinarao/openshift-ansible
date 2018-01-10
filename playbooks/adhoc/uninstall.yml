@@ -29,6 +29,7 @@
   - name: Uninstall Contrail SDN
     when: openshift_use_contrail | default(false) | bool
     command: oc delete -f /tmp/contrail-installer.yaml
+    run_once: True
     ignore_errors: yes
 
   - name: Delete Contrail mountpaths
