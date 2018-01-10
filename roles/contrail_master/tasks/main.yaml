@@ -43,11 +43,20 @@
       - { port: '8093', service: 'contrail-control-dns-xmpp' }
       - { port: '8093', service: 'contrail-control-introspect' }
       - { port: '8086', service: 'contrail-analytics-collector' }
-      - { port: '2181', service: 'zookeeper' }
+      - { port: '2181', service: 'zookeeper-client' }
       - { port: '5672', service: 'rabbitmq' }
       - { port: '8081', service: 'contrail-analytics-api' }
       - { port: '6381', service: 'redis' }
       - { port: '9092', service: 'kafka' }
+      - { port: '3888', service: 'zookeeper-internal' }
+      - { port: '2888', service: 'zookeeper-internal' }
+      - { port: '9041', service: 'cassandra' }
+      - { port: '9042', service: 'cassandra' }
+      - { port: '9160', service: 'cassandra' }
+      - { port: '9161', service: 'cassandra' }
+
+  - name: Save iptable rules
+    command: service iptables save
 
   - set_fact:
       api_vip: "{{ groups.lb.0 | ipaddr }}"
