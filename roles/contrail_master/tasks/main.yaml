@@ -34,7 +34,7 @@
     with_items: "{{ image.results }}"
     
   - name: Add iptable rules to open ports used by Contrail services
-    command: iptables -I OS_FIREWALL_ALLOW 1 -p all --dport "{{ item.port }}" -j ACCEPT -m comment --comment "{{ item.service }}"
+    command: iptables -I OS_FIREWALL_ALLOW 1 -p tcp --dport "{{ item.port }}" -j ACCEPT -m comment --comment "{{ item.service }}"
     with_items:
       - { port: '8082', service: 'contrail-config-api' }
       - { port: '8143', service: 'contrail-web-ui' }
