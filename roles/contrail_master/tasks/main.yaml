@@ -44,12 +44,15 @@
       - { port: '8093', service: 'contrail-control-introspect' }
       - { port: '8086', service: 'contrail-analytics-collector' }
       - { port: '2181', service: 'zookeeper-client' }
+      - { port: '2182', service: 'zookeeper-server' }
       - { port: '5672', service: 'rabbitmq' }
       - { port: '8081', service: 'contrail-analytics-api' }
       - { port: '6381', service: 'redis' }
       - { port: '9092', service: 'kafka' }
       - { port: '3888', service: 'zookeeper-internal' }
       - { port: '2888', service: 'zookeeper-internal' }
+      - { port: '3889', service: 'zookeeper-internal' }
+      - { port: '2889', service: 'zookeeper-internal' }
       - { port: '9041', service: 'cassandra' }
       - { port: '9042', service: 'cassandra' }
       - { port: '9160', service: 'cassandra' }
