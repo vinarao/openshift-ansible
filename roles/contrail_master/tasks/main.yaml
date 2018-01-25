@@ -58,13 +58,15 @@
       - { port: '9100', service: 'test' }
       - { port: '8433', service: 'test' }
       - { port: '8080', service: 'test' }
-      - { port: '9042', service: 'test' }
       - { port: '8083', service: 'test' }
-      - { port: '9042', service: 'test' }
       - { port: '9042', service: 'test' }
       - { port: '8092', service: 'test' }
       - { port: '8086', service: 'test' }
       - { port: '8084', service: 'test' }
+      - { port: '7000', service: 'test' }
+      - { port: '7010', service: 'test' }
+      - { port: '7199', service: 'test' }
+      - { port: '7198', service: 'test' }
 
   - name: Save iptable rules
     command: service iptables save

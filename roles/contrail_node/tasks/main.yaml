@@ -39,6 +39,7 @@
   command: iptables -I OS_FIREWALL_ALLOW 1 -p tcp --dport "{{ item.port }}" -j ACCEPT -m comment --comment "{{ item.service }}"
   with_items:
     - { port: '8085', service: 'contrail-vrouter-agent-introspect' }
+    - { port: '9091', service: 'contrail-cni' }
 
 - when:
   - loopback.stat.exists == False
@@ -91,6 +92,7 @@
   command: oc create -f /tmp/contrail-installer.yaml
   run_once: True
   delegate_to: "{{ contrail_master }}"
+  ignore_errors: yes
 
 - name: Patch restricted scc
   command: >

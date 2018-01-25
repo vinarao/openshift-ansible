@@ -2,7 +2,6 @@
 masters
 nodes
 etcd
-lb
 openshift_ca
 
 [OSEv3:vars]
@@ -36,21 +35,14 @@ contrail_docker_images_path=/root/docker_images
 cni_version=v0.5.2
 
 [masters]
-10.87.64.149 openshift_hostname=5b4s40
-10.87.64.150 openshift_hostname=5b4s41
-10.84.29.39 openshift_hostname=b7s39
-
-[lb]
-10.84.18.2 openshift_hostname=a4s2
+10.84.29.38 openshift_hostname=b7s38
 
 [etcd]
-10.87.64.149 openshift_hostname=5b4s40
+10.84.29.38 openshift_hostname=b7s38
 
 [nodes]
-10.87.64.149 openshift_hostname=5b4s40
-10.87.64.150 openshift_hostname=5b4s41
-10.84.29.39 openshift_hostname=b7s39
-10.84.18.4 openshift_hostname=a4s4
+10.84.29.38 openshift_hostname=b7s38
+10.84.18.5 openshift_hostname=a4s5
 
 [openshift_ca]
-10.87.64.149 openshift_hostname=5b4s40
+10.84.29.38 openshift_hostname=b7s38
