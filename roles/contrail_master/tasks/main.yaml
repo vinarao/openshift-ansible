@@ -37,36 +37,31 @@
     command: iptables -I OS_FIREWALL_ALLOW 1 -p tcp --dport "{{ item.port }}" -j ACCEPT -m comment --comment "{{ item.service }}"
     with_items:
       - { port: '8082', service: 'contrail-config-api' }
+      - { port: '9100', service: 'contrail-config-api-backend' }
+      - { port: '8084', service: 'contrail-config-api-introspect' }
       - { port: '8143', service: 'contrail-web-ui' }
+      - { port: '8080', service: 'contrail-web-ui-debug' }
       - { port: '5269', service: 'contrail-control-xmpp' }
       - { port: '8093', service: 'contrail-control-dns-xmpp' }
+      - { port: '8083', service: 'contrail-control-introspect' }
+      - { port: '8092', service: 'contrail-control-introspect-dns' }
       - { port: '8086', service: 'contrail-analytics-collector' }
-      - { port: '2181', service: 'zookeeper-client' }
-      - { port: '2182', service: 'zookeeper-server' }
-      - { port: '5672', service: 'rabbitmq' }
       - { port: '8081', service: 'contrail-analytics-api' }
+      - { port: '2181', service: 'zookeeper' }
+      - { port: '2182', service: 'zookeeper' }
+      - { port: '2888:3889', service: 'zookeeper' }
+      - { port: '5672', service: 'rabbitmq' }
       - { port: '6381', service: 'redis' }
       - { port: '9092', service: 'kafka' }
-      - { port: '3888', service: 'zookeeper-internal' }
-      - { port: '2888:3889', service: 'zookeeper-internal' }
-      - { port: '3889', service: 'zookeeper-internal' }
-      - { port: '2889', service: 'zookeeper-internal' }
       - { port: '9041', service: 'cassandra' }
       - { port: '9042', service: 'cassandra' }
       - { port: '9160', service: 'cassandra' }
       - { port: '9161', service: 'cassandra' }
-      - { port: '9100', service: 'test' }
-      - { port: '8433', service: 'test' }
-      - { port: '8080', service: 'test' }
-      - { port: '8083', service: 'test' }
-      - { port: '9042', service: 'test' }
-      - { port: '8092', service: 'test' }
-      - { port: '8086', service: 'test' }
-      - { port: '8084', service: 'test' }
-      - { port: '7000', service: 'test' }
-      - { port: '7010', service: 'test' }
-      - { port: '7199', service: 'test' }
-      - { port: '7198', service: 'test' }
+      - { port: '7000', service: 'cassandra' }
+      - { port: '7010', service: 'cassandra' }
+      - { port: '7199', service: 'cassandra' }
+      - { port: '7198', service: 'cassandra' }
+      - { port: '8443', service: 'ifmap' }
 
   - name: Save iptable rules
     command: service iptables save
