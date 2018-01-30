@@ -28,7 +28,9 @@
 
 To install Contrail SDN with OpenShift Enterprise, follow this [install guide](https://github.com/Juniper/contrail-docker/wiki/Red-Hat-OpenShift-with-Contrail-SDN) and set the following configuration parameters in the inventory
 
-Refer to this example [inventory](https://github.com/savithruml/openshift-contrail/blob/master/openshift/install-files/all-in-one/ose-install) file
+Refer to this example [inventory](https://github.com/savithruml/openshift-contrail/blob/master/openshift/install-files/all-in-one/ose-install) file for single-master deployment
+
+Refer to this example [inventory](https://github.com/savithruml/openshift-contrail/blob/master/openshift/install-files/all-in-one/ose-install-ha) file for multi-master HA deployment
 
 #### Set the flag to "false" to disable OVS
 
