@@ -4,7 +4,7 @@
 
 ## SUPPORTED ARCHITECTURE
 
-* Contrail SDN installed through OpenShift ansible supports both **SINGLE-MASTER** and **MULTI-MASTER (Hight-Availability)** configurations 
+* Contrail SDN installed through OpenShift ansible supports both **SINGLE-MASTER** and **MULTI-MASTER (High-Availability)** configurations 
 
 ## COMPONENTS
 
