@@ -21,7 +21,7 @@
     unarchive:
       src: "/tmp/contrail-kubernetes-docker-images_{{ contrail_version }}.tgz"
       dest: "/tmp"
-      remote_src: yes
+      remote_src: True
     when: item.stat.exists == False
     with_items: "{{ image.results }}"
 
