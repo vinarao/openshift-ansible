@@ -4,7 +4,7 @@
 
 ## SUPPORTED ARCHITECTURE
 
-* Contrail SDN installed through OpenShift ansible supports **SINGLE MASTER** and multiple nodes only. Automated deployment of a High-Avalability (HA) Contrail SDN stack is coming soon. For manual steps please contact us
+* Contrail SDN installed through OpenShift ansible supports both SINGLE-MASTER and MULTI-MASTER (High-Availability) configurations
 
 ## COMPONENTS
 
