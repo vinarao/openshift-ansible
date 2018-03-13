@@ -89,6 +89,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: contrail-config-zookeeper
+  namespace: kube-system
 data:
   ZOOKEEPER_PORT: "{{ ZOOKEEPER_PORT }}"
   ZOOKEEPER_PORTS: "{{ ZOOKEEPER_PORTS }}"
@@ -98,6 +99,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: contrail-analytics-zookeeper
+  namespace: kube-system
 data:
   ZOOKEEPER_PORT: "{{ ZOOKEEPER_ANALYTICS_PORT }}"
   ZOOKEEPER_PORTS: "{{ ZOOKEEPER_ANALYTICS_PORTS }}"
