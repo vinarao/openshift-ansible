@@ -10,12 +10,12 @@ metadata:
   name: env
   namespace: kube-system
 data:
-  AAA_MODE: {{ AAA_MODE }}
+  AAA_MODE: {{ AAA_MODE | default ('no-auth',true)}}
   ANALYTICS_API_VIP: {{ CONTRAIL_VIP }}
   ANALYTICS_NODES: {{ CONTRAIL_NODES }}
   ANALYTICSDB_NODES: {{ CONTRAIL_NODES }}
-  AUTH_MODE: {{ AUTH_MODE }}
-  CLOUD_ORCHESTRATOR: {{ CLOUD_ORCHESTRATOR }}
+  AUTH_MODE: {{ AUTH_MODE | default ('noauth',true)}}
+  CLOUD_ORCHESTRATOR: {{ CLOUD_ORCHESTRATOR | default ('NONE',true)}}
   CONFIG_API_VIP: {{ CONTRAIL_VIP }}
   CONFIG_NODES: {{ CONTRAIL_NODES }}
   CONFIGDB_NODES: {{ CONTRAIL_NODES }}
@@ -32,6 +32,7 @@ data:
   WEBUI_NODES: {{ CONTRAIL_NODES }}
   WEBUI_VIP: {{ CONTRAIL_VIP }}
   ZOOKEEPER_ANALYTICS_PORT: "{{ ZOOKEEPER_ANALYTICS_PORT }}"
+  ZOOKEEPER_ANALYTICS_PORTS: "{{ ZOOKEEPER_ANALYTICS_PORTS }}"
   ZOOKEEPER_NODES: {{ CONTRAIL_NODES }}
   ZOOKEEPER_PORT: "{{ ZOOKEEPER_PORT }}"
   ZOOKEEPER_PORTS: "{{ ZOOKEEPER_PORTS }}"
@@ -87,6 +88,26 @@ data:
 apiVersion: v1
 kind: ConfigMap
 metadata:
+  name: contrail-config-zookeeper
+data:
+  ZOOKEEPER_PORT: "{{ ZOOKEEPER_PORT }}"
+  ZOOKEEPER_PORTS: "{{ ZOOKEEPER_PORTS }}"
+  ZOOKEEPER_NODES: {{ CONTRAIL_NODES }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: contrail-analytics-zookeeper
+data:
+  ZOOKEEPER_PORT: "{{ ZOOKEEPER_ANALYTICS_PORT }}"
+  ZOOKEEPER_PORTS: "{{ ZOOKEEPER_ANALYTICS_PORTS }}"
+  ZOOKEEPER_NODES: {{ CONTRAIL_NODES }}
+# Containers section
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
   name: kube-manager-config
   namespace: kube-system
 data:
@@ -123,9 +144,11 @@ spec:
       - name: zookeeper
         image: "{{CONTRAIL_REGISTRY}}/contrail-external-zookeeper:{{CONTRAIL_CONTAINER_TAG}}"
         imagePullPolicy: ""
+        securityContext:
+          privileged: true
         envFrom:
         - configMapRef:
-            name: env
+            name: contrail-config-zookeeper
         volumeMounts:
         - mountPath: /var/lib/zookeeper
           name: zookeeper-data
@@ -168,6 +191,8 @@ spec:
       - name: kafka
         image: "{{CONTRAIL_REGISTRY}}/contrail-external-kafka:{{CONTRAIL_CONTAINER_TAG}}"
         imagePullPolicy: ""
+        securityContext:
+          privileged: true
         envFrom:
         - configMapRef:
             name: env
@@ -208,6 +233,8 @@ spec:
       - name: contrail-analyticsdb
         image: "{{CONTRAIL_REGISTRY}}/contrail-external-cassandra:{{CONTRAIL_CONTAINER_TAG}}"
         imagePullPolicy: ""
+        securityContext:
+          privileged: true
         envFrom:
         - configMapRef:
             name: contrail-analyticsdb-config
@@ -253,6 +280,8 @@ spec:
       - name: contrail-configdb
         image: "{{CONTRAIL_REGISTRY}}/contrail-external-cassandra:{{CONTRAIL_CONTAINER_TAG}}"
         imagePullPolicy: ""
+        securityContext:
+          privileged: true
         envFrom:
         - configMapRef:
             name: contrail-configdb-config
@@ -268,6 +297,58 @@ spec:
       - name: configdb-log
         hostPath:
           path: /var/log/contrail/configdb
+---
+apiVersion: extensions/v1beta1
+kind: DaemonSet
+metadata:
+  name: contrail-analytics-zookeeper
+  namespace: kube-system
+  labels:
+    app: zookeeper
+spec:
+  template:
+    metadata:
+      labels:
+        app: zookeeper
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: "opencontrail.org/controller"
+                operator: Exists
+      tolerations:
+      - key: node-role.kubernetes.io/master
+        operator: Exists
+        effect: NoSchedule
+      hostNetwork: true
+      containers:
+      - name: zookeeper
+        image: "{{CONTRAIL_REGISTRY}}/contrail-external-zookeeper:{{CONTRAIL_CONTAINER_TAG}}"
+        imagePullPolicy: ""
+        securityContext:
+          privileged: true
+        envFrom:
+        - configMapRef:
+            name: contrail-analytics-zookeeper
+        volumeMounts:
+        - mountPath: /var/lib/zookeeper
+          name: zookeeper-data
+        - mountPath: /var/log/zookeeper
+          name: zookeeper-logs
+        volumeMounts:
+        - mountPath: /data
+          name: analytics-zookeeper-data
+        - mountPath: /datalog
+          name: analytics-zookeeper-datalog
+      volumes:
+      - name: analytics-zookeeper-data
+        hostPath:
+          path: /var/lib/analytics_zookeeper_data
+      - name: analytics-zookeeper-datalog
+        hostPath:
+          path: /var/lib/analytics_zookeeper_datalog
 ---
 apiVersion: extensions/v1beta1
 kind: DaemonSet
@@ -298,6 +379,8 @@ spec:
       - name: contrail-analytics-api
         image: "{{CONTRAIL_REGISTRY}}/contrail-analytics-api:{{CONTRAIL_CONTAINER_TAG}}"
         imagePullPolicy: ""
+        securityContext:
+          privileged: true
         envFrom:
         - configMapRef:
             name: env
@@ -307,6 +390,8 @@ spec:
       - name: contrail-analytics-collector
         image: "{{CONTRAIL_REGISTRY}}/contrail-analytics-collector:{{CONTRAIL_CONTAINER_TAG}}"
         imagePullPolicy: ""
+        securityContext:
+          privileged: true
         envFrom:
         - configMapRef:
             name: env
@@ -316,6 +401,8 @@ spec:
       - name: contrail-analytics-alarm-gen
         image: "{{CONTRAIL_REGISTRY}}/contrail-analytics-alarm-gen:{{CONTRAIL_CONTAINER_TAG}}"
         imagePullPolicy: ""
+        securityContext:
+          privileged: true
         envFrom:
         - configMapRef:
             name: env
@@ -325,6 +412,8 @@ spec:
       - name: contrail-analytics-query-engine
         image: "{{CONTRAIL_REGISTRY}}/contrail-analytics-query-engine:{{CONTRAIL_CONTAINER_TAG}}"
         imagePullPolicy: ""
+        securityContext:
+          privileged: true
         envFrom:
         - configMapRef:
             name: env
@@ -334,6 +423,8 @@ spec:
       - name: contrail-analytics-snmp-collector
         image: "{{CONTRAIL_REGISTRY}}/contrail-analytics-snmp-collector:{{CONTRAIL_CONTAINER_TAG}}"
         imagePullPolicy: ""
+        securityContext:
+          privileged: true
         envFrom:
         - configMapRef:
             name: env
@@ -343,6 +434,8 @@ spec:
       - name: contrail-analytics-topology
         image: "{{CONTRAIL_REGISTRY}}/contrail-analytics-topology:{{CONTRAIL_CONTAINER_TAG}}"
         imagePullPolicy: ""
+        securityContext:
+          privileged: true
         envFrom:
         - configMapRef:
             name: env
@@ -352,6 +445,8 @@ spec:
       - name: contrail-analytics-nodemgr
         image: "{{CONTRAIL_REGISTRY}}/contrail-nodemgr:{{CONTRAIL_CONTAINER_TAG}}"
         imagePullPolicy: ""
+        securityContext:
+          privileged: true
         envFrom:
         - configMapRef:
             name: env
@@ -407,6 +502,8 @@ spec:
       - name: contrail-controller-control
         image: "{{CONTRAIL_REGISTRY}}/contrail-controller-control-control:{{CONTRAIL_CONTAINER_TAG}}"
         imagePullPolicy: ""
+        securityContext:
+          privileged: true
         envFrom:
         - configMapRef:
             name: env
@@ -416,6 +513,8 @@ spec:
       - name: contrail-controller-control-dns
         image: "{{CONTRAIL_REGISTRY}}/contrail-controller-control-dns:{{CONTRAIL_CONTAINER_TAG}}"
         imagePullPolicy: ""
+        securityContext:
+          privileged: true
         envFrom:
         - configMapRef:
             name: env
@@ -427,6 +526,8 @@ spec:
       - name: contrail-controller-control-named
         image: "{{CONTRAIL_REGISTRY}}/contrail-controller-control-named:{{CONTRAIL_CONTAINER_TAG}}"
         imagePullPolicy: ""
+        securityContext:
+          privileged: true
         envFrom:
         - configMapRef:
             name: env
@@ -440,6 +541,8 @@ spec:
       - name: contrail-controller-nodemgr
         image: "{{CONTRAIL_REGISTRY}}/contrail-nodemgr:{{CONTRAIL_CONTAINER_TAG}}"
         imagePullPolicy: ""
+        securityContext:
+          privileged: true
         envFrom:
         - configMapRef:
             name: env
@@ -497,6 +600,8 @@ spec:
       - name: contrail-controller-config-api
         image: "{{CONTRAIL_REGISTRY}}/contrail-controller-config-api:{{CONTRAIL_CONTAINER_TAG}}"
         imagePullPolicy: ""
+        securityContext:
+          privileged: true
         envFrom:
         - configMapRef:
             name: env
@@ -506,6 +611,8 @@ spec:
       - name: contrail-controller-config-devicemgr
         image: "{{CONTRAIL_REGISTRY}}/contrail-controller-config-devicemgr:{{CONTRAIL_CONTAINER_TAG}}"
         imagePullPolicy: ""
+        securityContext:
+          privileged: true
         envFrom:
         - configMapRef:
             name: env
@@ -515,6 +622,8 @@ spec:
       - name: contrail-controller-config-schema
         image: "{{CONTRAIL_REGISTRY}}/contrail-controller-config-schema:{{CONTRAIL_CONTAINER_TAG}}"
         imagePullPolicy: ""
+        securityContext:
+          privileged: true
         envFrom:
         - configMapRef:
             name: env
@@ -524,6 +633,8 @@ spec:
       - name: contrail-controller-config-svcmonitor
         image: "{{CONTRAIL_REGISTRY}}/contrail-controller-config-svcmonitor:{{CONTRAIL_CONTAINER_TAG}}"
         imagePullPolicy: ""
+        securityContext:
+          privileged: true
         envFrom:
         - configMapRef:
             name: env
@@ -533,6 +644,8 @@ spec:
       - name: contrail-controller-config-nodemgr
         image: "{{CONTRAIL_REGISTRY}}/contrail-nodemgr:{{CONTRAIL_CONTAINER_TAG}}"
         imagePullPolicy: ""
+        securityContext:
+          privileged: true
         envFrom:
         - configMapRef:
             name: env
@@ -588,6 +701,8 @@ spec:
       - name: contrail-controller-webui-job
         image: "{{CONTRAIL_REGISTRY}}/contrail-controller-webui-job:{{CONTRAIL_CONTAINER_TAG}}"
         imagePullPolicy: ""
+        securityContext:
+          privileged: true
         envFrom:
         - configMapRef:
             name: env
@@ -597,6 +712,8 @@ spec:
       - name: contrail-controller-webui-web
         image: "{{CONTRAIL_REGISTRY}}/contrail-controller-webui-web:{{CONTRAIL_CONTAINER_TAG}}"
         imagePullPolicy: ""
+        securityContext:
+          privileged: true
         envFrom:
         - configMapRef:
             name: env
@@ -640,6 +757,8 @@ spec:
       - name: redis
         image: "redis:4.0.2"
         imagePullPolicy: ""
+        securityContext:
+          privileged: true
         volumeMounts:
         - mountPath: /var/lib/redis
           name: redis-data
@@ -682,6 +801,8 @@ spec:
       - name: rabbitmq
         image: "{{CONTRAIL_REGISTRY}}/contrail-external-rabbitmq:{{CONTRAIL_CONTAINER_TAG}}"
         imagePullPolicy: ""
+        securityContext:
+          privileged: true
         envFrom:
         - configMapRef:
             name: env
@@ -730,6 +851,8 @@ spec:
       - name: contrail-kube-manager
         image: "{{CONTRAIL_REGISTRY}}/contrail-kubernetes-kube-manager:{{CONTRAIL_CONTAINER_TAG}}"
         imagePullPolicy: ""
+        securityContext:
+          privileged: true
         envFrom:
         - configMapRef:
             name: env
@@ -793,6 +916,8 @@ spec:
       - name: contrail-kubernetes-cni-init
         image: "{{CONTRAIL_REGISTRY}}/contrail-kubernetes-cni-init:{{CONTRAIL_CONTAINER_TAG}}"
         imagePullPolicy: ""
+        securityContext:
+          privileged: true
         envFrom:
         - configMapRef:
             name: env
@@ -836,6 +961,8 @@ spec:
       - name: contrail-agent-nodemgr
         image: "{{CONTRAIL_REGISTRY}}/contrail-nodemgr:{{CONTRAIL_CONTAINER_TAG}}"
         imagePullPolicy: ""
+        securityContext:
+          privileged: true
         envFrom:
         - configMapRef:
             name: env
@@ -888,10 +1015,16 @@ spec:
 
 # Meta information section
 ---
-kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: v1
+kind: ServiceAccount
 metadata:
-  name: contrail-kube-manager
+  name: contrail
+  namespace: kube-system
+---
+kind: ClusterRole
+apiVersion: v1
+metadata:
+  name: contrail
   namespace: kube-system
 rules:
   - apiGroups: ["*"]
@@ -899,23 +1032,19 @@ rules:
     verbs: ["*"]
 ---
 apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: contrail-kube-manager
-  namespace: kube-system
----
-apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRoleBinding
 metadata:
-  name: contrail-kube-manager
+  name: contrail
 roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: contrail-kube-manager
+  name: contrail
 subjects:
+- kind: SystemUser
+  name: kube-system:contrail
 - kind: ServiceAccount
-  name: contrail-kube-manager
+  name: contrail
   namespace: kube-system
+userNames:
+  - system:serviceaccount:kube-system:contrail
 ---
 apiVersion: v1
 kind: Secret
@@ -923,5 +1052,5 @@ metadata:
   name: contrail-kube-manager-token
   namespace: kube-system
   annotations:
-    kubernetes.io/service-account.name: contrail-kube-manager
+    kubernetes.io/service-account.name: contrail
 type: kubernetes.io/service-account-token
