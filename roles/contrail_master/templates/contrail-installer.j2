@@ -10,12 +10,12 @@ metadata:
   name: env
   namespace: kube-system
 data:
-  AAA_MODE: {{ AAA_MODE | default ('no-auth',true)}}
+  AAA_MODE: {{ AAA_MODE }}
   ANALYTICS_API_VIP: {{ CONTRAIL_VIP }}
   ANALYTICS_NODES: {{ CONTRAIL_NODES }}
   ANALYTICSDB_NODES: {{ CONTRAIL_NODES }}
-  AUTH_MODE: {{ AUTH_MODE | default ('noauth',true)}}
-  CLOUD_ORCHESTRATOR: {{ CLOUD_ORCHESTRATOR | default ('NONE',true)}}
+  AUTH_MODE: {{ AUTH_MODE }}
+  CLOUD_ORCHESTRATOR: {{ CLOUD_ORCHESTRATOR }}
   CONFIG_API_VIP: {{ CONTRAIL_VIP }}
   CONFIG_NODES: {{ CONTRAIL_NODES }}
   CONFIGDB_NODES: {{ CONTRAIL_NODES }}
