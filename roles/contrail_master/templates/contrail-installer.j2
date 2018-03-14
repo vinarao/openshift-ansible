@@ -893,8 +893,8 @@ spec:
           requiredDuringSchedulingIgnoredDuringExecution:
             nodeSelectorTerms:
             - matchExpressions:
-              - key: "opencontrail.org/vrouter"
-                operator: Exists
+              - key: "opencontrail.org/controller"
+                operator: DoesNotExist
       #Enable tolerations for single node setup
      # tolerations:
      # - key: node-role.kubernetes.io/master
