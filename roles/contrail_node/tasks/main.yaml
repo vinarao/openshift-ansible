@@ -29,6 +29,12 @@
     run_once: True
     delegate_to: "{{ groups.lb.0 }}"
 
+- name: Label minion nodes with opencontrail.org/vrouter=true
+  command: oc label nodes {{ hostvars[item]['openshift_hostname'] }} opencontrail.org/vrouter=true --overwrite=true
+  with_items: "{{ groups.lb.0 }}"
+  run_once: True
+  delegate_to: "{{ groups.lb.0 }}"
+
   - name: Create SSL certs
     command: "{{ item }}"
     with_items:

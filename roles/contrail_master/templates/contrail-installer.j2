@@ -893,13 +893,13 @@ spec:
           requiredDuringSchedulingIgnoredDuringExecution:
             nodeSelectorTerms:
             - matchExpressions:
-              - key: "opencontrail.org/controller"
+              - key: "opencontrail.org/vrouter"
                 operator: Exists
       #Enable tolerations for single node setup
-      tolerations:
-      - key: node-role.kubernetes.io/master
-        operator: Exists
-        effect: NoSchedule
+     # tolerations:
+     # - key: node-role.kubernetes.io/master
+     #   operator: Exists
+     #   effect: NoSchedule
       automountServiceAccountToken: false
       hostNetwork: true
       initContainers:
