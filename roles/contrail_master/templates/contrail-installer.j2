@@ -31,11 +31,7 @@ data:
   VROUTER_GATEWAY: {{ VROUTER_GATEWAY }}
   WEBUI_NODES: {{ contrail_nodes }}
   WEBUI_VIP: {{ contrail_vip }}
-  ZOOKEEPER_ANALYTICS_PORT: "{{ zookeeper_analytics_port }}"
-  ZOOKEEPER_ANALYTICS_PORTS: "{{ zookeeper_analytics_ports }}"
   ZOOKEEPER_NODES: {{ contrail_nodes }}
-  ZOOKEEPER_PORT: "{{ zookeeper_port }}"
-  ZOOKEEPER_PORTS: "{{ zookeeper_ports }}"
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -83,13 +79,15 @@ metadata:
   name: rabbitmq-config
   namespace: kube-system
 data:
+  RABBITMQ_NODES: {{ contrail_nodes }}
+  RABBITMQ_NODE_PORT: "{{ rabbitmq_node_port }}"
   RABBITMQ_ERLANG_COOKIE: "47EFF3BB-4786-46E0-A5BB-58455B3C2CB4"
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: contrail-config-zookeeper
-  namespace: kube-system
+  aamespace: kube-system
 data:
   ZOOKEEPER_PORT: "{{ zookeeper_port }}"
   ZOOKEEPER_PORTS: "{{ zookeeper_ports }}"
@@ -121,15 +119,15 @@ data:
 apiVersion: extensions/v1beta1
 kind: DaemonSet
 metadata:
-  name: zookeeper
+  name: config-zookeeper
   namespace: kube-system
   labels:
-    app: zookeeper
+    app: config-zookeeper
 spec:
   template:
     metadata:
       labels:
-        app: zookeeper
+        app: config-zookeeper
     spec:
       affinity:
         nodeAffinity:
@@ -199,6 +197,8 @@ spec:
         envFrom:
         - configMapRef:
             name: env
+        - configMapRef:
+            name: contrail-analytics-zookeeper
         volumeMounts:
         - mountPath: /tmp/kafka-logs
           name: kafka-logs
@@ -387,6 +387,8 @@ spec:
         envFrom:
         - configMapRef:
             name: env
+        - configMapRef:
+            name: contrail-analytics-zookeeper
         volumeMounts:
         - mountPath: /var/log/contrail
           name: analytics-logs
@@ -398,6 +400,8 @@ spec:
         envFrom:
         - configMapRef:
             name: env
+        - configMapRef:
+            name: contrail-analytics-zookeeper
         volumeMounts:
         - mountPath: /var/log/contrail
           name: analytics-logs
@@ -409,6 +413,8 @@ spec:
         envFrom:
         - configMapRef:
             name: env
+        - configMapRef:
+            name: contrail-analytics-zookeeper
         volumeMounts:
         - mountPath: /var/log/contrail
           name: analytics-logs
@@ -420,6 +426,8 @@ spec:
         envFrom:
         - configMapRef:
             name: env
+        - configMapRef:
+            name: contrail-analytics-zookeeper
         volumeMounts:
         - mountPath: /var/log/contrail
           name: analytics-logs
@@ -431,6 +439,8 @@ spec:
         envFrom:
         - configMapRef:
             name: env
+        - configMapRef:
+            name: contrail-analytics-zookeeper
         volumeMounts:
         - mountPath: /var/log/contrail
           name: analytics-logs
@@ -442,6 +452,8 @@ spec:
         envFrom:
         - configMapRef:
             name: env
+        - configMapRef:
+            name: contrail-analytics-zookeeper
         volumeMounts:
         - mountPath: /var/log/contrail
           name: analytics-logs
@@ -455,6 +467,8 @@ spec:
             name: env
         - configMapRef:
             name: nodemgr-config
+        - configMapRef:
+            name: contrail-analytics-zookeeper
         env:
         - name: NODE_TYPE
           value: analytics
@@ -510,6 +524,8 @@ spec:
         envFrom:
         - configMapRef:
             name: env
+        - configMapRef:
+            name: contrail-config-zookeeper
         volumeMounts:
         - mountPath: /var/log/contrail
           name: control-logs
@@ -534,6 +550,8 @@ spec:
         envFrom:
         - configMapRef:
             name: env
+        - configMapRef:
+            name: contrail-config-zookeeper
         securityContext:
           privileged: true
         volumeMounts:
@@ -551,6 +569,8 @@ spec:
             name: env
         - configMapRef:
             name: nodemgr-config
+        - configMapRef:
+            name: contrail-config-zookeeper
         env:
         - name: NODE_TYPE
           value: control
@@ -608,6 +628,8 @@ spec:
         envFrom:
         - configMapRef:
             name: env
+        - configMapRef:
+            name: contrail-config-zookeeper
         volumeMounts:
         - mountPath: /var/log/contrail
           name: config-logs
@@ -619,6 +641,8 @@ spec:
         envFrom:
         - configMapRef:
             name: env
+        - configMapRef:
+            name: contrail-config-zookeeper
         volumeMounts:
         - mountPath: /var/log/contrail
           name: config-logs
@@ -630,6 +654,8 @@ spec:
         envFrom:
         - configMapRef:
             name: env
+        - configMapRef:
+            name: contrail-config-zookeeper
         volumeMounts:
         - mountPath: /var/log/contrail
           name: config-logs
@@ -641,6 +667,8 @@ spec:
         envFrom:
         - configMapRef:
             name: env
+        - configMapRef:
+            name: contrail-config-zookeeper
         volumeMounts:
         - mountPath: /var/log/contrail
           name: config-logs
@@ -654,6 +682,8 @@ spec:
             name: env
         - configMapRef:
             name: nodemgr-config
+        - configMapRef:
+            name: contrail-config-zookeeper
         env:
         - name: NODE_TYPE
           value: config
@@ -709,6 +739,8 @@ spec:
         envFrom:
         - configMapRef:
             name: env
+        - configMapRef:
+            name: contrail-config-zookeeper
         volumeMounts:
         - mountPath: /var/log/contrail
           name: webui-logs
@@ -720,6 +752,8 @@ spec:
         envFrom:
         - configMapRef:
             name: env
+        - configMapRef:
+            name: contrail-config-zookeeper
         volumeMounts:
         - mountPath: /var/log/contrail
           name: webui-logs
@@ -762,6 +796,9 @@ spec:
         imagePullPolicy: ""
         securityContext:
           privileged: true
+        envFrom:
+        - configMapRef:
+            name: env
         volumeMounts:
         - mountPath: /var/lib/redis
           name: redis-data
@@ -811,6 +848,8 @@ spec:
             name: env
         - configMapRef:
             name: rabbitmq-config
+        - configMapRef:
+            name: contrail-config-zookeeper
         volumeMounts:
         - mountPath: /var/lib/rabbitmq
           name: rabbitmq-data
@@ -861,6 +900,8 @@ spec:
             name: env
         - configMapRef:
             name: kube-manager-config
+        - configMapRef:
+            name: contrail-config-zookeeper
         volumeMounts:
         - mountPath: /var/log/contrail
           name: kube-manager-logs
