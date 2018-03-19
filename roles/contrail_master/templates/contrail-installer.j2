@@ -28,7 +28,7 @@ data:
   RABBITMQ_NODES: {{ contrail_nodes }}
   RABBITMQ_NODE_PORT: "{{ rabbitmq_node_port }}"
   REDIS_NODES: {{ contrail_nodes }}
-  VROUTER_GATEWAY: {{ VROUTER_GATEWAY }}
+  VROUTER_GATEWAY: {{ vrouter_gateway }}
   WEBUI_NODES: {{ contrail_nodes }}
   WEBUI_VIP: {{ contrail_vip }}
   ZOOKEEPER_NODES: {{ contrail_nodes }}
@@ -87,7 +87,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: contrail-config-zookeeper
-  aamespace: kube-system
+  namespace: kube-system
 data:
   ZOOKEEPER_PORT: "{{ zookeeper_port }}"
   ZOOKEEPER_PORTS: "{{ zookeeper_ports }}"
