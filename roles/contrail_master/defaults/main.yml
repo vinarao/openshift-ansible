@@ -3,7 +3,7 @@ contrail_os_release: redhat7
 analyticsdb_min_diskgb: 50
 configdb_min_diskgb: 25
 aaa_mode: no-auth
-auth_mode: noaut
+auth_mode: noauth
 CLOUD_ORCHESTRATOR: kubernetes
 LOG_LEVEL: SYS_NOTICE
 METADATA_PROXY_SECRET: contrail
