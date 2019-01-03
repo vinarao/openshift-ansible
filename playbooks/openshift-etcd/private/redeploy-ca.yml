@@ -14,10 +14,10 @@
 - name: Backup existing etcd CA certificate directories
   hosts: oo_etcd_to_config
   tasks:
-  - include_role:
+  - import_role:
       name: etcd
       tasks_from: backup_ca_certificates.yml
-  - include_role:
+  - import_role:
       name: etcd
       tasks_from: remove_ca_certificates.yml
 
@@ -26,7 +26,6 @@
 - name: Create temp directory for syncing certs
   hosts: localhost
   connection: local
-  become: no
   gather_facts: no
   tasks:
   - name: Create local temp directory for syncing certs
@@ -34,15 +33,18 @@
     register: g_etcd_mktemp
     changed_when: false
 
+  - name: Chmod local temp directory for syncing certs
+    local_action: file path="{{ g_etcd_mktemp.stdout }}" mode=0777
+    changed_when: false
+
 - name: Distribute etcd CA to etcd hosts
   hosts: oo_etcd_to_config
   tasks:
-  - include_role:
+  - import_role:
       name: etcd
       tasks_from: distribute_ca.yml
     vars:
       etcd_sync_cert_dir: "{{ hostvars['localhost'].g_etcd_mktemp.stdout }}"
-      etcd_ca_host: "{{ groups.oo_etcd_to_config.0 }}"
 
 - import_playbook: restart.yml
   # Do not restart etcd when etcd certificates were previously expired.
@@ -54,7 +56,7 @@
 - name: Retrieve etcd CA certificate
   hosts: oo_first_etcd
   tasks:
-  - include_role:
+  - import_role:
       name: etcd
       tasks_from: retrieve_ca_certificates.yml
     vars:
@@ -62,8 +64,8 @@
 
 - name: Distribute etcd CA to masters
   hosts: oo_masters_to_config
-  vars:
-    openshift_ca_host: "{{ groups.oo_first_master.0 }}"
+  roles:
+  - openshift_facts
   tasks:
   - name: Deploy etcd CA
     copy:
@@ -74,7 +76,6 @@
 - name: Delete temporary directory on localhost
   hosts: localhost
   connection: local
-  become: no
   gather_facts: no
   tasks:
   - file:

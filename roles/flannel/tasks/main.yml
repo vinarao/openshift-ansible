@@ -1,7 +1,9 @@
 ---
 - name: Install flannel
   become: yes
-  package: name=flannel state=present
+  package:
+    name: flannel
+    state: present
   when: not openshift_is_atomic | bool
   register: result
   until: result is succeeded
@@ -41,3 +43,21 @@
   notify:
     - restart docker
     - restart node
+
+- name: Enable Pod to Pod communication
+  command: /sbin/iptables --wait -I FORWARD -d {{ openshift_cluster_network_cidr }} -i {{ flannel_interface }} -j ACCEPT -m comment --comment "Pod to Pod communication"
+  notify:
+    - save iptable rules
+
+- name: Allow external network access
+  command: /sbin/iptables -t nat -A POSTROUTING -o {{ flannel_interface }}  -j MASQUERADE -m comment --comment "Allow external network access"
+  notify:
+    - save iptable rules
+
+- name: Allow DNS access
+  command: /sbin/iptables -A OS_FIREWALL_ALLOW -p {{ item }} -m {{ item }} --dport 53 -j ACCEPT -m comment --comment "Allow DNS {{ item }} access"
+  with_items:
+    - "tcp"
+    - "udp"
+  notify:
+    - save iptable rules

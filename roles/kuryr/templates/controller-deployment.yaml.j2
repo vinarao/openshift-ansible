@@ -3,33 +3,45 @@
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
-  labels:
-    name: kuryr-controller
   name: kuryr-controller
   namespace: {{ kuryr_namespace }}
 spec:
-  replicas: 1
+  replicas: {{ kuryr_controller_replicas }}
+  strategy:
+    type: RollingUpdate
+{% if (kuryr_controller_replicas|default(1)|int == 1) %}
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+{% endif %}
   template:
     metadata:
       labels:
-        name: kuryr-controller
+        app: kuryr
+        component: network
+        type: infra
+        openshift.io/component: network
+      annotations:
+        scheduler.alpha.kubernetes.io/critical-pod: ''
       name: kuryr-controller
     spec:
       serviceAccountName: kuryr-controller
-      automountServiceAccountToken: true
       hostNetwork: true
       containers:
-      - image: kuryr/controller:latest
-        imagePullPolicy: IfNotPresent
+      - image: {{ openshift_openstack_kuryr_controller_image }}
         name: controller
-{% if kuryr_openstack_enable_pools | default(false) %}
+{% if enable_kuryr_controller_probes|default(true)|bool %}
         readinessProbe:
-          exec:
-            command:
-            - cat
-            - /tmp/pools_loaded
+          httpGet:
+            path: /ready
+            port: {{ kuryr_controller_healthcheck_port }}
+          timeoutSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /alive
+            port: {{ kuryr_controller_healthcheck_port }}
+          initialDelaySeconds: 15
 {% endif %}
-        terminationMessagePath: "/dev/termination-log"
         # FIXME(dulek): This shouldn't be required, but without it selinux is
         #               complaining about access to kuryr.conf.
         securityContext:
@@ -39,9 +51,29 @@ spec:
         - name: config-volume
           mountPath: "/etc/kuryr/kuryr.conf"
           subPath: kuryr.conf
+        - name: certificates-volume
+          mountPath: "/etc/ssl/certs/kuryr-ca-bundle.crt"
+          subPath: kuryr-ca-bundle.crt
+          readOnly: true
+{% if (kuryr_controller_replicas|default(1)|int > 1) %}
+      - image: {{ openshift_openstack_kuryr_elector_image }}
+        name: leader-elector
+        args:
+        - "--election=kuryr-controller"
+        - "--http=0.0.0.0:{{ kuryr_controller_leader_elector_port }}"
+        - "--election-namespace={{ kuryr_namespace }}"
+        - "--ttl=5s"
+        ports:
+        - containerPort: {{ kuryr_controller_leader_elector_port }}
+          protocol: TCP
+{% endif %}
       volumes:
       - name: config-volume
         configMap:
           name: kuryr-config
           defaultMode: 0666
-      restartPolicy: Always
+      - name: certificates-volume
+        secret:
+          secretName: kuryr-certificates
+      nodeSelector:
+        node-role.kubernetes.io/infra: "true"

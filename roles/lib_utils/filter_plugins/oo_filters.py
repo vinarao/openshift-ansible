@@ -4,10 +4,11 @@
 """
 Custom filters for use in openshift-ansible
 """
+import ast
+import json
 import os
 import pdb
 import random
-import re
 
 from base64 import b64encode
 from collections import Mapping
@@ -21,13 +22,10 @@ import yaml
 from ansible import errors
 from ansible.parsing.yaml.dumper import AnsibleDumper
 
-# ansible.compat.six goes away with Ansible 2.4
-try:
-    from ansible.compat.six import string_types, u
-    from ansible.compat.six.moves.urllib.parse import urlparse
-except ImportError:
-    from ansible.module_utils.six import string_types, u
-    from ansible.module_utils.six.moves.urllib.parse import urlparse
+# pylint: disable=import-error,no-name-in-module
+from ansible.module_utils.six import iteritems, string_types, u
+# pylint: disable=import-error,no-name-in-module
+from ansible.module_utils.six.moves.urllib.parse import urlparse
 
 HAS_OPENSSL = False
 try:
@@ -128,7 +126,7 @@ def lib_utils_oo_collect(data_list, attribute=None, filters=None):
             raise errors.AnsibleFilterError(
                 "lib_utils_oo_collect expects filter to be a dict")
         retval.extend([get_attr(d, attribute) for d in data if (
-            all([d.get(key, None) == filters[key] for key in filters]))])
+            all([get_attr(d, key) == filters[key] for key in filters]))])
     else:
         retval.extend([get_attr(d, attribute) for d in data])
 
@@ -250,6 +248,15 @@ def lib_utils_oo_dict_to_keqv_list(data):
         Return data:
         ['a=1', 'b=2']
     """
+    if not isinstance(data, dict):
+        try:
+            # This will attempt to convert something that looks like a string
+            # representation of a dictionary (including json) into a dictionary.
+            data = ast.literal_eval(data)
+        except ValueError:
+            msg = "|failed expects first param is a dict. Got {}. Type: {}"
+            msg = msg.format(str(data), str(type(data)))
+            raise errors.AnsibleFilterError(msg)
     return ['='.join(str(e) for e in x) for x in data.items()]
 
 
@@ -274,7 +281,7 @@ def haproxy_backend_masters(hosts, port):
     return servers
 
 
-# pylint: disable=too-many-branches
+# pylint: disable=too-many-branches, too-many-nested-blocks
 def lib_utils_oo_parse_named_certificates(certificates, named_certs_dir, internal_hostnames):
     """ Parses names from list of certificate hashes.
 
@@ -319,9 +326,10 @@ def lib_utils_oo_parse_named_certificates(certificates, named_certs_dir, interna
             cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, st_cert)
             certificate['names'].append(str(cert.get_subject().commonName.decode()))
             for i in range(cert.get_extension_count()):
-                if cert.get_extension(i).get_short_name() == 'subjectAltName':
-                    for name in str(cert.get_extension(i)).replace('DNS:', '').split(', '):
-                        certificate['names'].append(name)
+                if cert.get_extension(i).get_short_name() == b'subjectAltName':
+                    for name in str(cert.get_extension(i)).split(', '):
+                        if 'DNS:' in name:
+                            certificate['names'].append(name.replace('DNS:', ''))
         except Exception:
             raise errors.AnsibleFilterError(("|failed to parse certificate '%s', " % certificate['certfile'] +
                                              "please specify certificate names in host inventory"))
@@ -341,6 +349,58 @@ def lib_utils_oo_parse_named_certificates(certificates, named_certs_dir, interna
         if 'cafile' in certificate:
             certificate['cafile'] = os.path.join(named_certs_dir, os.path.basename(certificate['cafile']))
     return certificates
+
+
+def lib_utils_oo_parse_certificate_san(certificate):
+    """ Parses SubjectAlternativeNames from a PEM certificate.
+
+        Ex: certificate = '''-----BEGIN CERTIFICATE-----
+                MIIEcjCCAlqgAwIBAgIBAzANBgkqhkiG9w0BAQsFADAhMR8wHQYDVQQDDBZldGNk
+                LXNpZ25lckAxNTE2ODIwNTg1MB4XDTE4MDEyNDE5MDMzM1oXDTIzMDEyMzE5MDMz
+                M1owHzEdMBsGA1UEAwwUbWFzdGVyMS5hYnV0Y2hlci5jb20wggEiMA0GCSqGSIb3
+                DQEBAQUAA4IBDwAwggEKAoIBAQD4wBdWXNI3TF1M0b0bEIGyJPvdqKeGwF5XlxWg
+                NoA1Ain/Xz0N1SW5pXW2CDo9HX+ay8DyhzR532yrBa+RO3ivNCmfnexTQinfSLWG
+                mBEdiu7HO3puR/GNm74JNyXoEKlMAIRiTGq9HPoTo7tNV5MLodgYirpHrkSutOww
+                DfFSrNjH/ehqxwQtrIOnTAHigdTOrKVdoYxqXblDEMONTPLI5LMvm4/BqnAVaOyb
+                9RUzND6lxU/ei3FbUS5IoeASOHx0l1ifxae3OeSNAimm/RIRo9rieFNUFh45TzID
+                elsdGrLB75LH/gnRVV1xxVbwPN6xW1mEwOceRMuhIArJQ2G5AgMBAAGjgbYwgbMw
+                UQYDVR0jBEowSIAUXTqN88vCI6E7wONls3QJ4/63unOhJaQjMCExHzAdBgNVBAMM
+                FmV0Y2Qtc2lnbmVyQDE1MTY4MjA1ODWCCQDMaopfom6OljAMBgNVHRMBAf8EAjAA
+                MBMGA1UdJQQMMAoGCCsGAQUFBwMBMAsGA1UdDwQEAwIFoDAdBgNVHQ4EFgQU7l05
+                OYeY3HppL6/0VJSirudj8t0wDwYDVR0RBAgwBocEwKh6ujANBgkqhkiG9w0BAQsF
+                AAOCAgEAFU8sicE5EeQsUPnFEqDvoJd1cVE+8aCBqkW0++4GsVw2A/JOJ3OBJL6r
+                BV3b1u8/e8xBNi8hPi42Q+LWBITZZ/COFyhwEAK94hcr7eZLCV2xfUdMJziP4Qkh
+                /WRN7vXHTtJ6NP/d6A22SPbtnMSt9Y6G8y9qa5HBrqIqmkYbLzDw/SdZbDbuGhRk
+                xUwg2ahXNblVoE5P6rxPONgXliA94telZ1/61iyrVaiGQb1/GUP/DRfvvR4dOCrA
+                lMosW6fm37Wdi/8iYW+aDPWGS+yVK/sjSnHNjxqvrzkfGk+COa5riT9hJ7wZY0Hb
+                YiJS74SZgZt/nnr5PI2zFRUiZLECqCkZnC/sz29i+irLabnq7Cif9Mv+TUcXWvry
+                TdJuaaYdTSMRSUkDd/c9Ife8tOr1i1xhFzDNKNkZjTVRk1MBquSXndVCDKucdfGi
+                YoWm+NDFrayw8yxK/KTHo3Db3lu1eIXTHxriodFx898b//hysHr4hs4/tsEFUTZi
+                705L2ScIFLfnyaPby5GK/3sBIXtuhOFM3QV3JoYKlJB5T6wJioVoUmSLc+UxZMeE
+                t9gGVQbVxtLvNHUdW7uKQ5pd76nIJqApQf8wg2Pja8oo56fRZX2XLt8nm9cswcC4
+                Y1mDMvtfxglQATwMTuoKGdREuu1mbdb8QqdyQmZuMa72q+ax2kQ=
+                -----END CERTIFICATE-----'''
+
+            returns ['192.168.122.186']
+    """
+
+    if not HAS_OPENSSL:
+        raise errors.AnsibleFilterError("|missing OpenSSL python bindings")
+
+    names = []
+
+    try:
+        lcert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, certificate)
+        for i in range(lcert.get_extension_count()):
+            if lcert.get_extension(i).get_short_name() == b'subjectAltName':
+                sanstr = str(lcert.get_extension(i))
+                sanstr = sanstr.replace('DNS:', '')
+                sanstr = sanstr.replace('IP Address:', '')
+                names = sanstr.split(', ')
+    except Exception:
+        raise errors.AnsibleFilterError("|failed to parse certificate")
+
+    return names
 
 
 def lib_utils_oo_generate_secret(num_bytes):
@@ -365,31 +425,6 @@ def lib_utils_to_padded_yaml(data, level=0, indent=2, **kw):
         return "\n{0}".format(padded)
     except Exception as my_e:
         raise errors.AnsibleFilterError('Failed to convert: %s' % my_e)
-
-
-def lib_utils_oo_pods_match_component(pods, deployment_type, component):
-    """ Filters a list of Pods and returns the ones matching the deployment_type and component
-    """
-    if not isinstance(pods, list):
-        raise errors.AnsibleFilterError("failed expects to filter on a list")
-    if not isinstance(deployment_type, string_types):
-        raise errors.AnsibleFilterError("failed expects deployment_type to be a string")
-    if not isinstance(component, string_types):
-        raise errors.AnsibleFilterError("failed expects component to be a string")
-
-    image_prefix = 'openshift/origin-'
-    if deployment_type == 'openshift-enterprise':
-        image_prefix = 'openshift3/ose-'
-
-    matching_pods = []
-    image_regex = image_prefix + component + r'.*'
-    for pod in pods:
-        for container in pod['spec']['containers']:
-            if re.search(image_regex, container['image']):
-                matching_pods.append(pod)
-                break  # stop here, don't add a pod more than once
-
-    return matching_pods
 
 
 def lib_utils_oo_image_tag_to_rpm_version(version, include_dash=False):
@@ -465,26 +500,6 @@ def lib_utils_oo_loadbalancer_backends(
     return loadbalancer_backends
 
 
-def lib_utils_oo_chomp_commit_offset(version):
-    """Chomp any "+git.foo" commit offset string from the given `version`
-    and return the modified version string.
-
-Ex:
-- chomp_commit_offset(None)                 => None
-- chomp_commit_offset(1337)                 => "1337"
-- chomp_commit_offset("v3.4.0.15+git.derp") => "v3.4.0.15"
-- chomp_commit_offset("v3.4.0.15")          => "v3.4.0.15"
-- chomp_commit_offset("v1.3.0+52492b4")     => "v1.3.0"
-    """
-    if version is None:
-        return version
-    else:
-        # Stringify, just in case it's a Number type. Split by '+' and
-        # return the first split. No concerns about strings without a
-        # '+', .split() returns an array of the original string.
-        return str(version).split('+')[0]
-
-
 def lib_utils_oo_random_word(length, source='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'):
     """Generates a random string of given length from a set of alphanumeric characters.
        The default source uses [a-z][A-Z][0-9]
@@ -495,26 +510,11 @@ def lib_utils_oo_random_word(length, source='abcdefghijklmnopqrstuvwxyzABCDEFGHI
     return ''.join(random.choice(source) for i in range(length))
 
 
-def lib_utils_oo_contains_rule(source, apiGroups, resources, verbs):
-    '''Return true if the specified rule is contained within the provided source'''
-
-    rules = source['rules']
-
-    if rules:
-        for rule in rules:
-            if set(rule['apiGroups']) == set(apiGroups):
-                if set(rule['resources']) == set(resources):
-                    if set(rule['verbs']) == set(verbs):
-                        return True
-
-    return False
-
-
 def lib_utils_oo_selector_to_string_list(user_dict):
     """Convert a dict of selectors to a key=value list of strings
 
 Given input of {'region': 'infra', 'zone': 'primary'} returns a list
-of items as ['region=infra', 'zone=primary']
+of items as ['node-role.kubernetes.io/infra=true', 'zone=primary']
     """
     selectors = []
     for key in user_dict:
@@ -589,6 +589,99 @@ that result to this filter plugin.
     return secret_name
 
 
+def lib_utils_oo_l_of_d_to_csv(input_list):
+    """Map a list of dictionaries, input_list, into a csv string
+    of json values.
+
+    Example input:
+    [{'var1': 'val1', 'var2': 'val2'}, {'var1': 'val3', 'var2': 'val4'}]
+    Example output:
+    u'{"var1": "val1", "var2": "val2"},{"var1": "val3", "var2": "val4"}'
+    """
+    return ','.join(json.dumps(x) for x in input_list)
+
+
+def map_from_pairs(source, delim="="):
+    ''' Returns a dict given the source and delim delimited '''
+    if source == '':
+        return dict()
+
+    return dict(item.split(delim) for item in source.split(","))
+
+
+def map_to_pairs(source, delim="="):
+    ''' Returns a comma separated str given the source as a dict '''
+
+    # Some default selectors are empty strings.
+    if source == {} or source == '':
+        return str()
+
+    return ','.join(["{}{}{}".format(key, delim, value) for key, value in iteritems(source)])
+
+
+def lib_utils_oo_etcd_host_urls(hosts, use_ssl=True, port='2379'):
+    '''Return a list of urls for etcd hosts'''
+    urls = []
+    port = str(port)
+    proto = "https://" if use_ssl else "http://"
+    for host in hosts:
+        url_string = "{}{}:{}".format(proto, host, port)
+        urls.append(url_string)
+    return urls
+
+
+def lib_utils_mutate_htpass_provider(idps):
+    '''Updates identityProviders list to mutate filename of htpasswd auth
+    to hardcode filename = /etc/origin/master/htpasswd'''
+    old_keys = ('filename', 'fileName', 'file_name')
+    for idp in idps:
+        if 'provider' in idp:
+            idp_p = idp['provider']
+            if idp_p['kind'] == 'HTPasswdPasswordIdentityProvider':
+                for old_key in old_keys:
+                    if old_key in idp_p:
+                        idp_p.pop(old_key)
+                idp_p['file'] = '/etc/origin/master/htpasswd'
+    return idps
+
+
+def lib_utils_oo_oreg_image(image_default, oreg_url):
+    '''Converts default image string to utilize oreg_url, if defined.
+       oreg_url should be passed in as string "None" if undefined.
+
+       Example input:  "quay.io/coreos/etcd:v99",
+                       "example.com/openshift/origin-${component}:${version}"
+       Example output: "example.com/coreos/etcd:v99"'''
+    # if no oreg_url is specified, we just return the original default
+    if oreg_url == 'None':
+        return image_default
+    oreg_parts = oreg_url.rsplit('/', 2)
+    if len(oreg_parts) < 2:
+        raise errors.AnsibleFilterError("oreg_url malformed: {}".format(oreg_url))
+    if not (len(oreg_parts) >= 3 and '.' in oreg_parts[0]):
+        # oreg_url does not include host information; we'll just return etcd default
+        return image_default
+
+    image_parts = image_default.split('/')
+    if len(image_parts) < 3:
+        raise errors.AnsibleFilterError("default image dictionary malformed, do not adjust this value.")
+    return '/'.join([oreg_parts[0], image_parts[1], image_parts[2]])
+
+
+def lib_utils_oo_list_of_dict_to_dict_from_key(input_list, keyname):
+    '''Converts a list of dictionaries to a dictionary with keyname: dictionary
+
+       Example input: [{'name': 'first', 'url': 'x.com'}, {'name': 'second', 'url': 'y.com'}],
+                      'name'
+       Example output: {'first': {'url': 'x.com', 'name': 'first'}, 'second': {'url': 'y.com', 'name': 'second'}}'''
+    output_dict = {}
+    for item in input_list:
+        retrieved_val = item.get(keyname)
+        if keyname is not None:
+            output_dict[retrieved_val] = item
+    return output_dict
+
+
 class FilterModule(object):
     """ Custom ansible filter mapping """
 
@@ -598,7 +691,6 @@ class FilterModule(object):
         return {
             "lib_utils_oo_select_keys": lib_utils_oo_select_keys,
             "lib_utils_oo_select_keys_from_list": lib_utils_oo_select_keys_from_list,
-            "lib_utils_oo_chomp_commit_offset": lib_utils_oo_chomp_commit_offset,
             "lib_utils_oo_collect": lib_utils_oo_collect,
             "lib_utils_oo_pdb": lib_utils_oo_pdb,
             "lib_utils_oo_prepend_strings_in_list": lib_utils_oo_prepend_strings_in_list,
@@ -607,15 +699,21 @@ class FilterModule(object):
             "lib_utils_oo_dict_to_keqv_list": lib_utils_oo_dict_to_keqv_list,
             "lib_utils_oo_list_to_dict": lib_utils_oo_list_to_dict,
             "lib_utils_oo_parse_named_certificates": lib_utils_oo_parse_named_certificates,
+            "lib_utils_oo_parse_certificate_san": lib_utils_oo_parse_certificate_san,
             "lib_utils_oo_generate_secret": lib_utils_oo_generate_secret,
-            "lib_utils_oo_pods_match_component": lib_utils_oo_pods_match_component,
             "lib_utils_oo_image_tag_to_rpm_version": lib_utils_oo_image_tag_to_rpm_version,
             "lib_utils_oo_hostname_from_url": lib_utils_oo_hostname_from_url,
             "lib_utils_oo_loadbalancer_frontends": lib_utils_oo_loadbalancer_frontends,
             "lib_utils_oo_loadbalancer_backends": lib_utils_oo_loadbalancer_backends,
             "lib_utils_to_padded_yaml": lib_utils_to_padded_yaml,
             "lib_utils_oo_random_word": lib_utils_oo_random_word,
-            "lib_utils_oo_contains_rule": lib_utils_oo_contains_rule,
             "lib_utils_oo_selector_to_string_list": lib_utils_oo_selector_to_string_list,
             "lib_utils_oo_filter_sa_secrets": lib_utils_oo_filter_sa_secrets,
+            "lib_utils_oo_l_of_d_to_csv": lib_utils_oo_l_of_d_to_csv,
+            "map_from_pairs": map_from_pairs,
+            "map_to_pairs": map_to_pairs,
+            "lib_utils_oo_etcd_host_urls": lib_utils_oo_etcd_host_urls,
+            "lib_utils_mutate_htpass_provider": lib_utils_mutate_htpass_provider,
+            "lib_utils_oo_oreg_image": lib_utils_oo_oreg_image,
+            "lib_utils_oo_list_of_dict_to_dict_from_key": lib_utils_oo_list_of_dict_to_dict_from_key,
         }
